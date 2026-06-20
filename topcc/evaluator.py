@@ -6,7 +6,7 @@ from typing import List
 from topcc.numba_kernels import (
     get_paths_max_length,
     get_time_to_rewards,
-    calculate_max_distance,
+    calculate_max_mst_edge,
     maximize_reward,
 )
 from topcc.solution import Solution
@@ -35,9 +35,9 @@ class Evaluator:
             speeds = np.array(solution.ctx.speeds)
             interesting_times, _ = get_time_to_rewards(paths, speeds, self.env.distmx)
             interpolated_positions = self._interpolate_positions(paths, speeds, interesting_times)
-            max_distance = calculate_max_distance(interpolated_positions)
+            max_mst_edge = calculate_max_mst_edge(interpolated_positions)
 
-            min_rssi = self.rssi_model.compute(max_distance, noise=False)
+            min_rssi = self.rssi_model.compute(max_mst_edge, noise=False)
             solution.score = (total_reward, min_rssi, -max_len)
 
     def _interpolate_positions(self, paths, speeds, interesting_times):

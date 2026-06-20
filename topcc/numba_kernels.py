@@ -46,21 +46,60 @@ def get_time_to_rewards(paths, speeds, distmx):
 
 
 @njit(cache=True, fastmath=True)
-def calculate_max_distance(interpolated_positions):
+def calculate_max_mst_edge(interpolated_positions):
     if len(interpolated_positions) <= 1:
         return 0.0
-    k, n, _ = interpolated_positions.shape
-    max_distance = 0.0
-    for i in range(k):
-        for j in range(i + 1, k):
-            for t in range(n):
+    k = interpolated_positions.shape[0]
+    n = interpolated_positions.shape[1]
+    max_mst_edge_over_time = 0.0
+    
+    dist_matrix = np.zeros((k, k))
+    
+    for t in range(n):
+        for i in range(k):
+            for j in range(i + 1, k):
                 pos_i = interpolated_positions[i, t, :]
                 pos_j = interpolated_positions[j, t, :]
-                distance = np.sqrt(
+                dist = np.sqrt(
                     (pos_i[0] - pos_j[0]) ** 2 + (pos_i[1] - pos_j[1]) ** 2
                 )
-                max_distance = max(max_distance, distance)
-    return max_distance
+                dist_matrix[i, j] = dist
+                dist_matrix[j, i] = dist
+                
+        in_mst = np.zeros(k, dtype=np.bool_)
+        min_dist = np.zeros(k)
+        for i in range(k):
+            min_dist[i] = np.inf
+            
+        in_mst[0] = True
+        for j in range(1, k):
+            min_dist[j] = dist_matrix[0, j]
+            
+        max_edge_in_mst = 0.0
+        
+        for _ in range(1, k):
+            best_u = -1
+            best_dist = np.inf
+            for u in range(k):
+                if not in_mst[u] and min_dist[u] < best_dist:
+                    best_dist = min_dist[u]
+                    best_u = u
+                    
+            if best_u == -1:
+                break
+                
+            in_mst[best_u] = True
+            if best_dist > max_edge_in_mst:
+                max_edge_in_mst = best_dist
+                
+            for v in range(k):
+                if not in_mst[v] and dist_matrix[best_u, v] < min_dist[v]:
+                    min_dist[v] = dist_matrix[best_u, v]
+                    
+        if max_edge_in_mst > max_mst_edge_over_time:
+            max_mst_edge_over_time = max_edge_in_mst
+            
+    return max_mst_edge_over_time
 
 
 @njit(cache=True, fastmath=True)
